@@ -50,47 +50,105 @@ This code uses deep sleep. Once flashed, your ESP32 will go
 to deep sleep most of the time and will not be available as a serial
 device during deep sleep.
 
-You have to hold down the "boot" button and press the "RST" button 
+You have to hold down the "boot" button and press the "RST" button
 to go back into bootloader mode to re-flash/update the board.
 
 */
 
 #include <Arduino.h>
 
-#define FREQ_HZ 880  // Tone frequency of the fox. For reference: c-major-scale: 440 494 523 587 659 698 784 880 988 1047
+#define SENDER 10
 
-#define TIME_TO_TX 200           // Time ESP32 will transmit (in ms)
-#define TIME_TO_SLEEP  1800      // Time ESP32 will go to sleep (in ms)
+#if SENDER == 1
+#define FREQ_HZ 440
+#define NR_BEEP 1
+#define TIME_TO_BEEP 200
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 2
+#define FREQ_HZ 440
+#define NR_BEEP 2
+#define TIME_TO_BEEP 100
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 3
+#define FREQ_HZ 440
+#define NR_BEEP 3
+#define TIME_TO_BEEP 66
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 4
+#define FREQ_HZ 880
+#define NR_BEEP 1
+#define TIME_TO_BEEP 200
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 5
+#define FREQ_HZ 880
+#define NR_BEEP 2
+#define TIME_TO_BEEP 100
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 6
+#define FREQ_HZ 880
+#define NR_BEEP 3
+#define TIME_TO_BEEP 66
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 7
+#define FREQ_HZ 1760
+#define NR_BEEP 1
+#define TIME_TO_BEEP 200
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 8
+#define FREQ_HZ 1760
+#define NR_BEEP 2
+#define TIME_TO_BEEP 100
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 9
+#define FREQ_HZ 1760
+#define NR_BEEP 3
+#define TIME_TO_BEEP 66
+#define TIME_BETWEEN_BEEP 100
+#elif SENDER == 10
+#define FREQ_HZ 220
+#define NR_BEEP 4
+#define TIME_TO_BEEP 50
+#define TIME_BETWEEN_BEEP 100
+#else
+#error "No node selected"
+#endif
 
-#define DATA_PIN 3               // Pin of the ESP32 connected to the data pin of the transmitter module
-#define TX_ARTIFICIAL_VCC_PIN 4  // Pin of the ESP32 providing power to the transmitter module due to unused enable pin
+#define TIME_TO_SLEEP (((TIME_TO_BEEP * NR_BEEP) * 10) - (TIME_BETWEEN_BEEP * NR_BEEP))
 
-#define uS_TO_MS_FACTOR 1000     // Conversion factor for micro seconds to ms
+#define DATA_PIN 3              // Pin of the ESP32 connected to the data pin of the transmitter module
+#define TX_ARTIFICIAL_VCC_PIN 4 // Pin of the ESP32 providing power to the transmitter module due to unused enable pin
 
-void setup() {
-  // set pin modes
-  pinMode(TX_ARTIFICIAL_VCC_PIN, OUTPUT);
-  pinMode(DATA_PIN, OUTPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
+#define uS_TO_MS_FACTOR 1000 // Conversion factor for micro seconds to ms
 
-  // set wakeup timer
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_MS_FACTOR);
+void setup()
+{
+    // set pin modes
+    pinMode(TX_ARTIFICIAL_VCC_PIN, OUTPUT);
+    pinMode(DATA_PIN, OUTPUT);
+    pinMode(LED_BUILTIN, OUTPUT);
 
-  // start TX
-  digitalWrite(TX_ARTIFICIAL_VCC_PIN, HIGH);  // enable transmitter module
-  digitalWrite(LED_BUILTIN, LOW);             // enable built-in LED
-  tone(DATA_PIN, FREQ_HZ);                    // output tone to transmitter
+    // set wakeup timer
+    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_MS_FACTOR);
 
-  delay(TIME_TO_TX);                          // wait...
+    for (size_t i = 0; i < NR_BEEP; i++)
+    {
+        // start TX
+        digitalWrite(TX_ARTIFICIAL_VCC_PIN, HIGH); // enable transmitter module
+        digitalWrite(LED_BUILTIN, LOW);            // enable built-in LED
+        tone(DATA_PIN, FREQ_HZ);                   // output tone to transmitter
+        delay(TIME_TO_BEEP);                       // wait...
+        // stop TX
+        noTone(DATA_PIN);                         // stop tone
+        digitalWrite(LED_BUILTIN, HIGH);          // disable LED
+        digitalWrite(TX_ARTIFICIAL_VCC_PIN, LOW); // disable transmitter module
+                                                  // wait between beep
+        delay(TIME_BETWEEN_BEEP);                 // wait...
+    }
 
-  // stop TX
-  noTone(DATA_PIN);                           // stop tone
-  digitalWrite(LED_BUILTIN, HIGH);            // disable LED
-  digitalWrite(TX_ARTIFICIAL_VCC_PIN, LOW);   // disable transmitter module
-
-  esp_deep_sleep_start();                     // go to deep sleep
+    esp_deep_sleep_start(); // go to deep sleep
 }
 
-void loop() {
-  // never executed because of deep sleep
+void loop()
+{
+    // never executed because of deep sleep
 }
